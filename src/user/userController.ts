@@ -6,6 +6,7 @@ import userModel from "./userModel";
 import User from "./userTypes";
 import { config } from "../config/config";
 
+// Register User
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body;
 
@@ -59,4 +60,30 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-export { createUser };
+// Login User
+const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return next(createHttpError(400, "All Fields are required"));
+  }
+
+  const user = await userModel.findOne({ email });
+
+  if (!user) {
+    return next(createHttpError(400, "User not found"));
+  }
+
+  const isMatched = await bcrypt.compare(password, user.password);
+  if (!isMatched) {
+    return next(createHttpError(400, "Invalid Cred!"));
+  }
+
+  const token = sign({ sub: user._id }, config.jwtSecret as string, {
+    expiresIn: "7d",
+    algorithm: "HS256",
+  });
+
+  res.json({ accessToken: token });
+};
+export { createUser, loginUser };
